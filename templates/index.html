@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テレビ用天気予報原稿作成AIチャットボット</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --line-green: #06c755;
+            --line-bg: #f5f5f5;
+            --line-chat-bg: #ffffff;
+            --line-bubble-me: #06c755;
+            --line-bubble-other: #f5f5f5;
+            --line-text-me: #ffffff;
+            --line-text-other: #333333;
+            --line-border: #e6e6e6;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--line-bg);
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background-color: var(--line-green);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+        
+        .header h1 {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        
+        .reset-button {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 5px 15px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: none;
+            transition: all 0.3s ease;
+        }
+        
+        .reset-button:hover {
+            background-color: #ff6b81;
+        }
+        
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: var(--line-chat-bg);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message {
+            display: flex;
+            margin-bottom: 15px;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.user {
+            justify-content: flex-end;
+        }
+        
+        .message.bot {
+            justify-content: flex-start;
+        }
+        
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-right: 10px;
+        }
+        
+        .message.user .avatar {
+            margin-right: 0;
+            margin-left: 10px;
+            order: 2;
+        }
+        
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .message-content {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 20px;
+            position: relative;
+        }
+        
+        .message.bot .message-content {
+            background-color: var(--line-bubble-other);
+            color: var(--line-text-other);
+            border-top-left-radius: 0;
+        }
+        
+        .message.user .message-content {
+            background-color: var(--line-bubble-me);
+            color: var(--line-text-me);
+            border-top-right-radius: 0;
+        }
+        
+        .message-time {
+            font-size: 0.7rem;
+            color: #999;
+            margin-top: 5px;
+            display: block;
+        }
+        
+        .message.bot .message-time {
+            text-align: left;
+        }
+        
+        .message.user .message-time {
+            text-align: right;
+        }
+        
+        .script-section {
+            margin-top: 10px;
+            margin-bottom: 10px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        
+        .script-section h3 {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .script-content {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        
+        .script-stats {
+            font-size: 0.8rem;
+            color: #999;
+            margin-top: 10px;
+            text-align: right;
+        }
+        
+        .edit-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            padding: 3px 10px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .edit-button:hover {
+            background-color: #2980b9;
+        }
+        
+        .input-container {
+            display: flex;
+            padding: 15px;
+            background-color: white;
+            border-top: 1px solid var(--line-border);
+        }
+        
+        .message-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid var(--line-border);
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.3s ease;
+        }
+        
+        .message-input:focus {
+            border-color: var(--line-green);
+        }
+        
+        .send-button {
+            background-color: var(--line-green);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            margin-left: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .send-button:hover {
+            background-color: #05a745;
+        }
+        
+        .send-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .send-button svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .action-button {
+            background-color: var(--line-green);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+        
+        .action-button:hover {
+            background-color: #05a745;
+        }
+        
+        .action-button.secondary {
+            background-color: #3498db;
+        }
+        
+        .action-button.secondary:hover {
+            background-color: #2980b9;
+        }
+        
+        .action-button.tertiary {
+            background-color: #9b59b6;
+        }
+        
+        .action-button.tertiary:hover {
+            background-color: #8e44ad;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .modal-body {
+            margin-bottom: 15px;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .modal-button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .modal-button.primary {
+            background-color: var(--line-green);
+            color: white;
+        }
+        
+        .modal-button.secondary {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+        
+        .edit-textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            font-family: 'Noto Sans JP', sans-serif;
+            resize: vertical;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: var(--line-green);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .typing-indicator {
+            display: flex;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background-color: #bbb;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        
+        .typing-indicator span:nth-child(1) {
+            animation-delay: 0s;
+        }
+        
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0); }
+        }
+        
+        /* レスポンシブデザイン */
+        @media (max-width: 600px) {
+            .message-content {
+                max-width: 80%;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .action-button {
+                width: 100%;
+            }
+            
+            .header h1 {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>テレビ用天気予報原稿作成AIチャットボット</h1>
+            <button id="resetButton" class="reset-button">リセット</button>
+        </div>
+        
+        <div class="chat-container" id="chatContainer">
+            <!-- チャットメッセージがここに表示されます -->
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>天気データを取得中...</p>
+        </div>
+        
+        <div class="input-container">
+            <input type="text" class="message-input" id="messageInput" placeholder="メッセージを入力...">
+            <button class="send-button" id="sendButton">
+                <svg viewBox="0 0 24 24">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+    
+    <!-- 編集モーダル -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">天気予報原稿を編集</h2>
+                <button class="close-modal" id="closeEditModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <textarea class="edit-textarea" id="editTextarea"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" id="cancelEdit">キャンセル</button>
+                <button class="modal-button primary" id="saveEdit">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- リセット確認モーダル -->
+    <div class="modal" id="resetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">リセット確認</h2>
+                <button class="close-modal" id="closeResetModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>すべての会話履歴と生成された原稿をリセットしますか？</p>
+                <p>この操作は元に戻せません。</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" id="cancelReset">キャンセル</button>
+                <button class="modal-button primary" id="confirmReset">リセット</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM要素
+            const chatContainer = document.getElementById('chatContainer');
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const resetButton = document.getElementById('resetButton');
+            const loading = document.getElementById('loading');
+            
+            // モーダル関連
+            const editModal = document.getElementById('editModal');
+            const editTextarea = document.getElementById('editTextarea');
+            const closeEditModal = document.getElementById('closeEditModal');
+            const cancelEdit = document.getElementById('cancelEdit');
+            const saveEdit = document.getElementById('saveEdit');
+            
+            const resetModal = document.getElementById('resetModal');
+            const closeResetModal = document.getElementById('closeResetModal');
+            const cancelReset = document.getElementById('cancelReset');
+            const confirmReset = document.getElementById('confirmReset');
+            
+            // 状態管理
+            let currentScript = null;
+            let isGenerating = false;
+            let isFirstMessage = true;
+            
+            // 初期メッセージを表示
+            addBotMessage("こんにちは！テレビ用の天気予報原稿を作成するAIチャットボットです。「天気予報原稿を生成」ボタンをクリックして、最新の天気情報に基づいた原稿を生成しましょう。");
+            
+            // アクションボタンを追加
+            const actionButtons = document.createElement('div');
+            actionButtons.className = 'action-buttons';
+            actionButtons.innerHTML = `
+                <button class="action-button" id="generateButton">天気予報原稿を生成</button>
+            `;
+            chatContainer.appendChild(actionButtons);
+            
+            // 天気予報原稿生成ボタンのイベントリスナー
+            document.getElementById('generateButton').addEventListener('click', function() {
+                if (isGenerating) return;
+                
+                isGenerating = true;
+                loading.style.display = 'block';
+                
+                // タイピングインジケーターを表示
+                showTypingIndicator();
+                
+                // 天気予報原稿を生成するAPIリクエスト
+                fetch('/api/generate_script', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // タイピングインジケーターを非表示
+                    hideTypingIndicator();
+                    
+                    // 生成された原稿を表示
+                    currentScript = data.script;
+                    displayScript(currentScript);
+                    
+                    // リセットボタンを表示
+                    resetButton.style.display = 'block';
+                    
+                    isGenerating = false;
+                    loading.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    hideTypingIndicator();
+                    addBotMessage("申し訳ありません。天気予報原稿の生成中にエラーが発生しました。もう一度お試しください。");
+                    isGenerating = false;
+                    loading.style.display = 'none';
+                });
+            });
+            
+            // メッセージ送信処理
+            function sendMessage() {
+                const message = messageInput.value.trim();
+                if (!message) return;
+                
+                // ユーザーメッセージを表示
+                addUserMessage(message);
+                messageInput.value = '';
+                
+                if (!currentScript) {
+                    // 原稿がまだ生成されていない場合
+                    addBotMessage("まずは「天気予報原稿を生成」ボタンをクリックして、原稿を生成してください。");
+                    return;
+                }
+                
+                // タイピングインジケーターを表示
+                showTypingIndicator();
+                
+                // 原稿を再生成するAPIリクエスト
+                fetch('/api/regenerate_script', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        instruction: message
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // タイピングインジケーターを非表示
+                    hideTypingIndicator();
+                    
+                    // 生成された原稿を表示
+                    currentScript = data.script;
+                    displayScript(currentScript);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    hideTypingIndicator();
+                    addBotMessage("申し訳ありません。天気予報原稿の再生成中にエラーが発生しました。もう一度お試しください。");
+                });
+            }
+            
+            // 送信ボタンのイベントリスナー
+            sendButton.addEventListener('click', sendMessage);
+            
+            // Enterキーでの送信
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // 原稿を表示する関数
+            function displayScript(script) {
+                // 原稿メッセージを作成
+                const scriptMessage = document.createElement('div');
+                scriptMessage.className = 'message bot';
+                
+                // 現在時刻
+                const now = new Date();
+                const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                
+                // アバターを追加
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar';
+                avatar.innerHTML = `<img src="/static/images/bot_avatar.png" alt="Bot">`;
+                scriptMessage.appendChild(avatar);
+                
+                // メッセージ内容を追加
+                const messageContent = document.createElement('div');
+                messageContent.className = 'message-content';
+                
+                // 日付と予報対象日
+                const dateInfo = document.createElement('div');
+                dateInfo.innerHTML = `<strong>${script.date}</strong><br><strong>${script.forecast_date}</strong>`;
+                messageContent.appendChild(dateInfo);
+                
+                // 原稿セクションを順番に追加（現在の全国天気の概況→今後のポイント→全国天気→全国気温→週間予報）
+                const sectionOrder = [
+                    "現在の全国天気の概況",
+                    "今後のポイント",
+                    "全国天気",
+                    "全国気温",
+                    "週間予報"
+                ];
+                
+                sectionOrder.forEach(sectionName => {
+                    if (script[sectionName]) {
+                        const section = document.createElement('div');
+                        section.className = 'script-section';
+                        section.innerHTML = `
+                            <h3>${sectionName}</h3>
+                            <div class="script-content">${script[sectionName]}</div>
+                        `;
+                        messageContent.appendChild(section);
+                    }
+                });
+                
+                // 統計情報を追加
+                const stats = document.createElement('div');
+                stats.className = 'script-stats';
+                stats.innerHTML = `合計: ${script.total_chars}文字 / 読み上げ時間: 約${script.reading_time}分`;
+                messageContent.appendChild(stats);
+                
+                // 時間を追加
+                const timeElement = document.createElement('span');
+                timeElement.className = 'message-time';
+                timeElement.textContent = timeString;
+                messageContent.appendChild(timeElement);
+                
+                scriptMessage.appendChild(messageContent);
+                chatContainer.appendChild(scriptMessage);
+                
+                // アクションボタンを更新
+                updateActionButtons();
+                
+                // 自動スクロール
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // アクションボタンを更新する関数
+            function updateActionButtons() {
+                // 既存のアクションボタンを削除
+                const existingButtons = document.querySelector('.action-buttons');
+                if (existingButtons) {
+                    existingButtons.remove();
+                }
+                
+                // 新しいアクションボタンを追加
+                const actionButtons = document.createElement('div');
+                actionButtons.className = 'action-buttons';
+                
+                if (currentScript) {
+                    // 原稿が生成されている場合
+                    actionButtons.innerHTML = `
+                        <button class="action-button" id="regenerateButton">原稿を再生成</button>
+                        <button class="action-button secondary" id="editButton">原稿を編集</button>
+                        <button class="action-button tertiary" id="exportButton">テキスト出力</button>
+                    `;
+                } else {
+                    // 原稿がまだ生成されていない場合
+                    actionButtons.innerHTML = `
+                        <button class="action-button" id="generateButton">天気予報原稿を生成</button>
+                    `;
+                }
+                
+                chatContainer.appendChild(actionButtons);
+                
+                // イベントリスナーを設定
+                if (currentScript) {
+                    document.getElementById('regenerateButton').addEventListener('click', function() {
+                        addBotMessage("原稿を再生成するための指示を入力してください。例：「もっと簡潔に」「詳しく説明して」など");
+                    });
+                    
+                    document.getElementById('editButton').addEventListener('click', function() {
+                        // 編集モーダルを表示
+                        showEditModal();
+                    });
+                    
+                    document.getElementById('exportButton').addEventListener('click', function() {
+                        // テキスト出力
+                        exportAsText();
+                    });
+                } else {
+                    document.getElementById('generateButton').addEventListener('click', function() {
+                        if (isGenerating) return;
+                        
+                        isGenerating = true;
+                        loading.style.display = 'block';
+                        
+                        // タイピングインジケーターを表示
+                        showTypingIndicator();
+                        
+                        // 天気予報原稿を生成するAPIリクエスト
+                        fetch('/api/generate_script', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({})
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            // タイピングインジケーターを非表示
+                            hideTypingIndicator();
+                            
+                            // 生成された原稿を表示
+                            currentScript = data.script;
+                            displayScript(currentScript);
+                            
+                            // リセットボタンを表示
+                            resetButton.style.display = 'block';
+                            
+                            isGenerating = false;
+                            loading.style.display = 'none';
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            hideTypingIndicator();
+                            addBotMessage("申し訳ありません。天気予報原稿の生成中にエラーが発生しました。もう一度お試しください。");
+                            isGenerating = false;
+                            loading.style.display = 'none';
+                        });
+                    });
+                }
+            }
+            
+            // 編集モーダルを表示する関数
+            function showEditModal() {
+                if (!currentScript) return;
+                
+                // 原稿テキストを作成
+                let scriptText = `${currentScript.date}\n${currentScript.forecast_date}\n\n`;
+                
+                // 原稿セクションを順番に追加（現在の全国天気の概況→今後のポイント→全国天気→全国気温→週間予報）
+                const sectionOrder = [
+                    "現在の全国天気の概況",
+                    "今後のポイント",
+                    "全国天気",
+                    "全国気温",
+                    "週間予報"
+                ];
+                
+                sectionOrder.forEach(sectionName => {
+                    if (currentScript[sectionName]) {
+                        scriptText += `【${sectionName}】\n${currentScript[sectionName]}\n\n`;
+                    }
+                });
+                
+                // テキストエリアに設定
+                editTextarea.value = scriptText;
+                
+                // モーダルを表示
+                editModal.style.display = 'flex';
+            }
+            
+            // 編集モーダルを閉じる関数
+            function closeEditModal() {
+                editModal.style.display = 'none';
+            }
+            
+            // 編集内容を保存する関数
+            function saveEditedScript() {
+                const editedText = editTextarea.value;
+                
+                // 編集内容をサーバーに送信
+                fetch('/api/update_script', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        edited_text: editedText
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // 更新された原稿を表示
+                    currentScript = data.script;
+                    addBotMessage("原稿を更新しました。");
+                    displayScript(currentScript);
+                    
+                    // モーダルを閉じる
+                    closeEditModal();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    addBotMessage("申し訳ありません。原稿の更新中にエラーが発生しました。");
+                    closeEditModal();
+                });
+            }
+            
+            // テキスト出力関数
+            function exportAsText() {
+                if (!currentScript) return;
+                
+                fetch('/api/export_text', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.blob())
+                .then(blob => {
+                    // ダウンロードリンクを作成
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = '天気予報原稿.txt';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    
+                    addBotMessage("天気予報原稿をテキストファイルとして出力しました。");
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    addBotMessage("申し訳ありません。テキスト出力中にエラーが発生しました。");
+                });
+            }
+            
+            // リセット確認モーダルを表示する関数
+            function showResetModal() {
+                resetModal.style.display = 'flex';
+            }
+            
+            // リセット確認モーダルを閉じる関数
+            function closeResetModal() {
+                resetModal.style.display = 'none';
+            }
+            
+            // リセット実行関数
+            function resetChat() {
+                // チャット履歴をクリア
+                chatContainer.innerHTML = '';
+                
+                // 状態をリセット
+                currentScript = null;
+                isFirstMessage = true;
+                
+                // リセットボタンを非表示
+                resetButton.style.display = 'none';
+                
+                // 初期メッセージを表示
+                addBotMessage("こんにちは！テレビ用の天気予報原稿を作成するAIチャットボットです。「天気予報原稿を生成」ボタンをクリックして、最新の天気情報に基づいた原稿を生成しましょう。");
+                
+                // アクションボタンを更新
+                updateActionButtons();
+                
+                // モーダルを閉じる
+                closeResetModal();
+            }
+            
+            // ユーザーメッセージを追加する関数
+            function addUserMessage(text) {
+                const message = document.createElement('div');
+                message.className = 'message user';
+                
+                // 現在時刻
+                const now = new Date();
+                const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                
+                // アバターを追加
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar';
+                avatar.innerHTML = `<img src="/static/images/user_avatar.png" alt="User">`;
+                message.appendChild(avatar);
+                
+                // メッセージ内容を追加
+                const messageContent = document.createElement('div');
+                messageContent.className = 'message-content';
+                messageContent.textContent = text;
+                
+                // 時間を追加
+                const timeElement = document.createElement('span');
+                timeElement.className = 'message-time';
+                timeElement.textContent = timeString;
+                messageContent.appendChild(timeElement);
+                
+                message.appendChild(messageContent);
+                chatContainer.appendChild(message);
+                
+                // 自動スクロール
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // ボットメッセージを追加する関数
+            function addBotMessage(text) {
+                const message = document.createElement('div');
+                message.className = 'message bot';
+                
+                // 現在時刻
+                const now = new Date();
+                const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                
+                // アバターを追加
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar';
+                avatar.innerHTML = `<img src="/static/images/bot_avatar.png" alt="Bot">`;
+                message.appendChild(avatar);
+                
+                // メッセージ内容を追加
+                const messageContent = document.createElement('div');
+                messageContent.className = 'message-content';
+                messageContent.textContent = text;
+                
+                // 時間を追加
+                const timeElement = document.createElement('span');
+                timeElement.className = 'message-time';
+                timeElement.textContent = timeString;
+                messageContent.appendChild(timeElement);
+                
+                message.appendChild(messageContent);
+                chatContainer.appendChild(message);
+                
+                // 自動スクロール
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // タイピングインジケーターを表示する関数
+            function showTypingIndicator() {
+                const typingIndicator = document.createElement('div');
+                typingIndicator.className = 'message bot typing-indicator';
+                typingIndicator.id = 'typingIndicator';
+                
+                // アバターを追加
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar';
+                avatar.innerHTML = `<img src="/static/images/bot_avatar.png" alt="Bot">`;
+                typingIndicator.appendChild(avatar);
+                
+                // インジケーター内容を追加
+                const indicatorContent = document.createElement('div');
+                indicatorContent.className = 'message-content';
+                indicatorContent.innerHTML = `
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                `;
+                
+                typingIndicator.appendChild(indicatorContent);
+                chatContainer.appendChild(typingIndicator);
+                
+                // 自動スクロール
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // タイピングインジケーターを非表示にする関数
+            function hideTypingIndicator() {
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+            }
+            
+            // リセットボタンのイベントリスナー
+            resetButton.addEventListener('click', showResetModal);
+            
+            // 編集モーダルのイベントリスナー
+            closeEditModal.addEventListener('click', closeEditModal);
+            cancelEdit.addEventListener('click', closeEditModal);
+            saveEdit.addEventListener('click', saveEditedScript);
+            
+            // リセットモーダルのイベントリスナー
+            closeResetModal.addEventListener('click', closeResetModal);
+            cancelReset.addEventListener('click', closeResetModal);
+            confirmReset.addEventListener('click', resetChat);
+            
+            // モーダル外クリックで閉じる
+            window.addEventListener('click', function(event) {
+                if (event.target === editModal) {
+                    closeEditModal();
+                }
+                if (event.target === resetModal) {
+                    closeResetModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
