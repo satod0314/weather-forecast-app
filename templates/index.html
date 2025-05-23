@@ -534,58 +534,59 @@
             let isGenerating = false;
             let isFirstMessage = true;
             
-            // 初期メッセージを表示
-            addBotMessage("こんにちは！テレビ用の天気予報原稿を作成するAIチャットボットです。「天気予報原稿を生成」ボタンをクリックして、最新の天気情報に基づいた原稿を生成しましょう。");
-            
-            // アクションボタンを追加
-            const actionButtons = document.createElement('div');
-            actionButtons.className = 'action-buttons';
-            actionButtons.innerHTML = `
-                <button class="action-button" id="generateButton">天気予報原稿を生成</button>
-            `;
-            chatContainer.appendChild(actionButtons);
-            
-            // 天気予報原稿生成ボタンのイベントリスナー
-            document.getElementById('generateButton').addEventListener('click', function() {
-                if (isGenerating) return;
-                
-                isGenerating = true;
-                loading.style.display = 'block';
-                
-                // タイピングインジケーターを表示
-                showTypingIndicator();
-                
-                // 天気予報原稿を生成するAPIリクエスト
-                fetch('/api/generate_script', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({})
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // タイピングインジケーターを非表示
-                    hideTypingIndicator();
-                    
-                    // 生成された原稿を表示
-                    currentScript = data.script;
-                    displayScript(currentScript);
-                    
-                    // リセットボタンを表示
-                    resetButton.style.display = 'block';
-                    
-                    isGenerating = false;
-                    loading.style.display = 'none';
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    hideTypingIndicator();
-                    addBotMessage("申し訳ありません。天気予報原稿の生成中にエラーが発生しました。もう一度お試しください。");
-                    isGenerating = false;
-                    loading.style.display = 'none';
-                });
-            });
+// 初期メッセージを表示
+addBotMessage("こんにちは！テレビ用の天気予報原稿を作成するAIチャットボットです。「天気予報原稿を生成」ボタンをクリックして、最新の天気情報に基づいた原稿を生成しましょう。");
+
+// アクションボタンを追加
+const actionButtons = document.createElement('div');
+actionButtons.className = 'action-buttons';
+actionButtons.innerHTML = `
+    <button class="action-button" id="generateButton">天気予報原稿を生成</button>
+`;
+chatContainer.appendChild(actionButtons);
+
+// 天気予報原稿生成ボタンのイベントリスナー
+document.getElementById('generateButton').addEventListener('click', function() {
+    if (isGenerating) return;
+    
+    isGenerating = true;
+    loading.style.display = 'block';
+    
+    // タイピングインジケーターを表示
+    showTypingIndicator();
+    
+    // 天気予報原稿を生成するAPIリクエスト
+    fetch('/api/generate_script', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        // タイピングインジケーターを非表示
+        hideTypingIndicator();
+        
+        // 生成された原稿を表示
+        currentScript = data.script;
+        displayScript(currentScript);
+        
+        // リセットボタンを表示
+        resetButton.style.display = 'block';
+        
+        isGenerating = false;
+        loading.style.display = 'none';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        hideTypingIndicator();
+        addBotMessage("申し訳ありません。天気予報原稿の生成中にエラーが発生しました。もう一度お試しください。");
+        isGenerating = false;
+        loading.style.display = 'none';
+    });
+});
+
             
             // メッセージ送信処理
             function sendMessage() {
