@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, url_for
 import os
 import json
 import datetime
@@ -6,7 +6,7 @@ import tempfile
 from src.weather_data_enhanced import WeatherDataCollector
 from src.script_generator_improved import ScriptGenerator
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static', static_folder='static')
 
 # 現在のスクリプトを保存するグローバル変数
 current_script = None
@@ -176,16 +176,18 @@ def export_text():
         print(f"Error exporting text: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    """静的ファイルを提供するルート"""
-    return send_from_directory('static', filename)
-
-# 静的ファイルを提供するための関数
-def send_from_directory(directory, filename):
-    """指定されたディレクトリから静的ファイルを提供する"""
-    return app.send_static_file(os.path.join(directory, filename))
+# デバッグ用ルート
+@app.route('/debug')
+def debug():
+    """デバッグ情報を表示"""
+    debug_info = {
+        "static_url_path": app.static_url_path,
+        "static_folder": app.static_folder,
+        "static_files": os.listdir(app.static_folder) if os.path.exists(app.static_folder) else [],
+        "image_files": os.listdir(os.path.join(app.static_folder, 'images')) if os.path.exists(os.path.join(app.static_folder, 'images')) else []
+    }
+    return jsonify(debug_info)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
